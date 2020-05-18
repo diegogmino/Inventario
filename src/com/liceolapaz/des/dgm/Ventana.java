@@ -6,6 +6,7 @@ import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
+import java.security.Timestamp;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -13,6 +14,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 
 import javax.swing.JButton;
@@ -220,6 +222,7 @@ public class Ventana extends JFrame {
 		Connection conexion = null;
 		try {
 			conexion = crearConexion(URL_BASE_DATOS);
+			// Preparamos la orden
 			PreparedStatement ps = conexion.prepareStatement("SELECT Des, Tipo, Marca, Modelo, NumSerie, Resp, Local, FecAlta, FecMod, FecBaja, Motivo, Obs FROM actual WHERE Cod = ?");
 			String codigo = JOptionPane.showInputDialog(this, "Introduzca el código:", "Cargar datos", JOptionPane.INFORMATION_MESSAGE);
 			if (codigo == null || codigo.equals("")) {
@@ -230,6 +233,7 @@ public class Ventana extends JFrame {
 				
 				ps.setString(1, codigo);
 				ResultSet rs = ps.executeQuery();
+				// Vamos introduciendo en los campos correspondientes la información obtenida
 				if (rs.first()) {
 					txtCodigo.setText("" + codigo);
 					txtDescripcion.setText(rs.getString(1));
@@ -326,7 +330,7 @@ public class Ventana extends JFrame {
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				// TODO Auto-generated method stub
+				darBaja();
 				
 			}
 		});
@@ -335,10 +339,141 @@ public class Ventana extends JFrame {
 		
 	}
 	
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////	
+	
+	protected void darBaja() {
+	
+		String codigo = txtCodigo.getText();
+		
+		if (codigo.equals("")) {
+			JOptionPane.showMessageDialog(this, "No existe ningún objeto al que dar de baja", "Error", JOptionPane.ERROR_MESSAGE);
+		} else {
+			Connection conexion = null;
+			
+			try {
+				conexion = crearConexion(URL_BASE_DATOS);
+				// Preparamos la actualización de la tabla actual
+				PreparedStatement ps = conexion.prepareStatement("UPDATE actual SET FecAlta = ?, FecMod = ?, FecBaja = ?, Motivo = ? WHERE Cod = ?");
+				// Obtenemos en una variable de tipo Timestamp la fecha y hora actuales del equipo
+				java.sql.Timestamp timestamp = new java.sql.Timestamp(System.currentTimeMillis());
+				// Obtenemos el motivo de la baja mediante un popup
+				String motivoBaja = JOptionPane.showInputDialog(this, "Introduzca el motivo de la baja:", "Dar de baja", JOptionPane.QUESTION_MESSAGE);
+				// Rellenamos los campos del ps
+				ps.setString(1, txtFechaAlta.getText());
+				String fecMod = txtFechaModificacion.getText();
+				if (fecMod.equals("")) {
+					try {
+						ps.setObject(2, null);
+					} catch (SQLException e) {}
+				} else {
+					try {
+						ps.setString(2, fecMod);
+					} catch (SQLException e) {}
+				}
+				ps.setTimestamp(3, timestamp);
+				ps.setString(4, motivoBaja);
+				ps.setString(5, txtCodigo.getText());
+				
+				int filas1 = ps.executeUpdate();
+				if (filas1 != 0) {
+					JOptionPane.showMessageDialog(this, "La baja se ha cursado correctamente", "Info", JOptionPane.INFORMATION_MESSAGE);
+				}
+				// Preparamos el insert en la tabla historico 
+				PreparedStatement ps2 = conexion.prepareStatement("INSERT INTO historico (Cod, Des, Tipo, Marca, Modelo, NumSerie, Resp, Local, FecAlta, FecMod, FecBaja, Motivo, Obs) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+				// Rellenamos el ps2
+				ps2.setString(1, txtCodigo.getText());
+				ps2.setString(2, txtDescripcion.getText());
+				ps2.setString(3, txtTipo.getText());
+				ps2.setString(4, txtMarca.getText());
+				ps2.setString(5, txtModelo.getText());
+				
+				String numSerie = txtNumeroSerie.getText();
+				if (numSerie.equals("")) {
+					try {
+						ps2.setObject(6, null);
+					} catch (SQLException e) {}
+				} else {
+					try {
+						ps2.setString(6, numSerie);
+					} catch (SQLException e) {}
+				}
+				
+				String resp = txtResponsable.getText();
+				if (resp.equals("")) {
+					try {
+						ps2.setObject(7, null);
+					} catch (SQLException e) {}
+				} else {
+					try {
+						ps2.setString(7, resp);
+					} catch (SQLException e) {}
+				}
+				
+				String local = txtLocal.getText();
+				if (local.equals("")) {
+					try {
+						ps2.setObject(8, null);
+					} catch (SQLException e) {}
+				} else {
+					try {
+						ps2.setString(8, local);
+					} catch (SQLException e) {}
+				}
+				// La fecAlta no puede ser nula, así que no hace falta hacer comprobación
+				ps2.setString(9, txtFechaAlta.getText());
+				// La variable fecMod ya está creada así que la reutilizamos
+				if (fecMod.equals("")) {
+					try {
+						ps2.setObject(10, null);
+					} catch (SQLException e) {}
+				} else {
+					try {
+						ps2.setString(10, fecMod);
+					} catch (SQLException e) {}
+				}
+				// Fecha de baja
+				ps2.setTimestamp(11, timestamp);
+				// Motivo de la baja
+				ps2.setString(12, motivoBaja);
+				
+				String obs = txtObservaciones.getText();
+				if (obs.equals("")) {
+					try {
+						ps2.setObject(13, null);
+					} catch (SQLException e) {}
+				} else {
+					try {
+						ps2.setString(13, obs);
+					} catch (SQLException e) {}
+				}
+				// Ejecutamos la orden
+				int filas2 = ps2.executeUpdate();
+				if (filas2 != 0) {
+					JOptionPane.showMessageDialog(this, "La baja se ha insertado en el histórico", "Info", JOptionPane.INFORMATION_MESSAGE);
+				}
+				
+				refrescarDatos();
+				conexion.close();
+				
+				
+			} catch (SQLException e) {
+				JOptionPane.showMessageDialog(this,  e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+				try {
+					if (conexion != null) {
+						conexion.close();
+					}
+				} catch (SQLException e1) {}
+			}
+			
+		}
+		
+	
+	}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////	
 
 	protected void grabarDatos() {
-	
+		// Obtenemos el texto del campo codigo
 		String codigo = txtCodigo.getText();
 		if (codigo.equals("")) {
 			
@@ -346,19 +481,24 @@ public class Ventana extends JFrame {
 			
 			try {
 				conexion = crearConexion(URL_BASE_DATOS);
+				// Preparamos la orden
 				PreparedStatement ps = conexion.prepareStatement("INSERT INTO actual (Des, Tipo, Marca, Modelo, NumSerie, Resp, Local, Obs) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+				// Llamamos al método rellenar para completar el ps
 				if (!rellenarPS(conexion, ps)) {
 					return;
 				}
+				// Ejecutamos la orden y mandamos un mensaje de confirmación
 				int filas1 = ps.executeUpdate();
 				if (filas1 != 0) {
 					JOptionPane.showMessageDialog(this, "Se han creado los datos", "Info", JOptionPane.INFORMATION_MESSAGE);
 				}
 				
-				
-				PreparedStatement ps2 = conexion.prepareStatement("SELECT Cod, FecAlta FROM actual WHERE NumSerie = ?");
-				String numSerie = txtNumeroSerie.getText();
-				ps2.setString(1, numSerie);
+				// Obtenemos los datos necesarios para hacer un insert en la tabla historico
+				PreparedStatement ps2 = conexion.prepareStatement("SELECT Cod, FecAlta FROM actual WHERE Des = ? AND Tipo = ? AND Marca = ? AND Modelo = ?");
+				ps2.setString(1, txtDescripcion.getText());
+				ps2.setString(2, txtTipo.getText());
+				ps2.setString(3, txtMarca.getText());
+				ps2.setString(4, txtModelo.getText());
 				ResultSet rs = ps2.executeQuery();
 				PreparedStatement ps3 = conexion.prepareStatement("INSERT INTO historico (Cod, Des, Tipo, Marca, Modelo, NumSerie, Resp, Local, FecAlta, Obs) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 				rellenarPS2(ps3, rs);
@@ -377,11 +517,148 @@ public class Ventana extends JFrame {
 				} catch (SQLException e1) {}
 			}
 			
+		} else {
+			// Si existe un código en el campo txtCOdigo actualizamos la información
+			Connection conexion = null;
+			
+			try {
+				conexion = crearConexion(URL_BASE_DATOS);
+				PreparedStatement ps = conexion.prepareStatement("UPDATE actual SET Des = ?, Tipo = ?, Marca = ?, Modelo = ?, NumSerie = ?, Resp = ?, Local = ?, Obs = ?, FecAlta = ?, FecMod = ? WHERE Cod = ?");
+				if (!rellenarPS(conexion, ps)) {
+					return;
+				}
+				// Obtenemos en una variable de tipo Timestamp la fecha y hora actuales del equipo
+				java.sql.Timestamp timestamp = new java.sql.Timestamp(System.currentTimeMillis());
+				// Rellenamos los campos restantes del ps
+				ps.setString(9, txtFechaAlta.getText());
+				ps.setTimestamp(10, timestamp);
+				ps.setString(11, txtCodigo.getText());
+				int filas1 = ps.executeUpdate();
+				if (filas1 != 0) {
+					JOptionPane.showMessageDialog(this, "Se han actualizado los datos", "Info", JOptionPane.INFORMATION_MESSAGE);
+				}
+				// Obtenemos la información necesaria para hacer un insert en la tabla histórico
+				PreparedStatement ps2 = conexion.prepareStatement("SELECT Cod, FecAlta FROM actual WHERE NumSerie = ?");
+				String numSerie = txtNumeroSerie.getText();
+				ps2.setString(1, numSerie);
+				ResultSet rs = ps2.executeQuery();
+				PreparedStatement ps3 = conexion.prepareStatement("INSERT INTO historico (Cod, Des, Tipo, Marca, Modelo, NumSerie, Resp, Local, FecAlta, Obs, FecMod) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+				rellenarPS2(ps3, rs);
+				
+				ps3.setTimestamp(11, timestamp);
+				
+				int filas2 = ps3.executeUpdate();
+				if (filas2 != 0) {
+					JOptionPane.showMessageDialog(this, "Se han creado los datos en el histórico", "Info", JOptionPane.INFORMATION_MESSAGE);
+				}
+				
+				conexion.close();
+				
+			} catch (SQLException e) {
+				JOptionPane.showMessageDialog(this, e.getMessage(), "Error al insertar un cliente", JOptionPane.ERROR_MESSAGE);
+				try {
+					if (conexion != null) {
+						conexion.close();
+					}
+				} catch (SQLException e1) {}
+			}
+			
+		}
+		
+		refrescarDatos();
+	
+	}
+	
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////	
+	
+	private void refrescarDatos() {
+		// Método para refrescar los datos de los campos tras hacer el insert o el update correspondiente
+		Connection conexion = null;
+		try {
+			conexion = crearConexion(URL_BASE_DATOS);
+			PreparedStatement ps = conexion.prepareStatement("SELECT Des, Tipo, Marca, Modelo, NumSerie, Resp, Local, FecAlta, FecMod, FecBaja, Motivo, Obs, Cod FROM actual WHERE Des = ? AND Tipo = ? AND Marca = ? AND Modelo = ?");
+			
+			try {
+				ps.setString(1, txtDescripcion.getText());
+				ps.setString(2, txtTipo.getText());
+				ps.setString(3, txtMarca.getText());
+				ps.setString(4, txtModelo.getText());
+
+				ResultSet rs = ps.executeQuery();
+				if (rs.first()) {
+					txtCodigo.setText("" + rs.getString(13));
+					txtDescripcion.setText(rs.getString(1));
+					txtTipo.setText(rs.getString(2));
+					txtMarca.setText(rs.getString(3));
+					txtModelo.setText(rs.getString(4));
+					
+					if (rs.getObject(5) == null) {
+						txtNumeroSerie.setText("");
+					} else {
+						txtNumeroSerie.setText(rs.getString(5));
+					}
+					
+					if (rs.getObject(6) == null) {
+						txtResponsable.setText("");
+					} else {
+						txtResponsable.setText(rs.getString(6));
+					}
+					
+					if (rs.getObject(7) == null) {
+						txtLocal.setText("");
+					} else {
+						txtLocal.setText(rs.getString(7));
+					}
+														
+					txtFechaAlta.setText(rs.getString(8));
+					
+					if (rs.getObject(9) == null) {
+						txtFechaModificacion.setText("");
+					} else {
+						txtFechaModificacion.setText(rs.getString(9));
+					}
+					
+					if (rs.getObject(10) == null) {
+						txtFechaBaja.setText("");
+					} else {
+						txtFechaBaja.setText(rs.getString(10));
+					}
+					
+					if (rs.getObject(11) == null) {
+						txtMotivoBaja.setText("");
+					} else {
+						txtMotivoBaja.setText(rs.getString(11));
+					}
+					
+					if (rs.getObject(12) == null) {
+						txtObservaciones.setText("");
+					} else {
+						txtObservaciones.setText(rs.getString(12));
+					}
+					
+				} else {
+					JOptionPane.showMessageDialog(this, "No existe ningún objeto con los valores introducidos ", "Error", JOptionPane.ERROR_MESSAGE);
+					conexion.close();
+					return;
+				}
+			} catch (NumberFormatException ex) {
+				JOptionPane.showMessageDialog(this, "El código del objeto tiene que ser un código válido", "Error", JOptionPane.ERROR_MESSAGE);
+				conexion.close();
+				return;
+			}
+			
+		} catch (SQLException e) {
+			JOptionPane.showMessageDialog(this, e.getMessage(), "Error al cargar datos", JOptionPane.ERROR_MESSAGE);
+			try {
+				if (conexion != null) {
+					conexion.close();
+				}	
+			} catch (SQLException e1) {}
 		}
 		
 	
 	}
-	
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////	
 	
 	private void rellenarPS2(PreparedStatement ps, ResultSet rs) {
@@ -427,7 +704,7 @@ public class Ventana extends JFrame {
 				try {
 					ps.setString(8, local);
 				} catch (SQLException e) {}
-				// Rellenar campo fecha alta
+				// Rellenar campo fecha
 				try {
 					ps.setString(9, rs.getString(2));
 				} catch (SQLException e) {}
@@ -485,7 +762,7 @@ public class Ventana extends JFrame {
 		} catch (SQLException e) {}
 		// Rellenar el campo modelo
 		String modelo = txtModelo.getText();
-		if (marca.equals("")) {
+		if (modelo.equals("")) {
 			JOptionPane.showMessageDialog(this, "Introduzca un valor para el modelo", "Campo Obligatorio", JOptionPane.ERROR_MESSAGE);
 			try {
 				conexion.close();
@@ -575,7 +852,7 @@ public class Ventana extends JFrame {
 		JLabel lbTipo = new JLabel("Tipo");
 		panelCampos.add(lbTipo);
 		txtTipo = new JTextField();
-		// Creacion del JComboBox y añadir los items.
+		// Creacion del JComboBox y adición los items.
 		tipo = new JComboBox();
 		tipo.addItem("PC");
 		tipo.addItem("Proyector");
