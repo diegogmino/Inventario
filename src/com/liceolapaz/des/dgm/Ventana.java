@@ -58,6 +58,7 @@ public class Ventana extends JFrame {
 	private static final String URL_BASE_DATOS = "jdbc:mysql://localhost/Liceo?serverTimezone=Europe/Madrid";
 	
 	public Ventana(Dialogo dialogo, String usuario, String password) {
+		// Constructor de la ventana
 		super();
 		this.dialogo = dialogo;
 		this.usuario = usuario;
@@ -83,6 +84,7 @@ public class Ventana extends JFrame {
 	
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////	
 	
+	// Creamos la conexión
 	private Connection crearConexion(String url) throws SQLException {
 		return DriverManager.getConnection(url, this.usuario, this.password);
 	}
@@ -90,7 +92,7 @@ public class Ventana extends JFrame {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////	
 	
 	private void crearMenu() {
-		
+		// Método para crear la barra de menú
 		JMenuBar menuBar = new JMenuBar();
 		// Creamos la pestaña de Opciones
 		JMenu menuOpciones = new JMenu("Opciones");
@@ -146,7 +148,7 @@ public class Ventana extends JFrame {
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				// TODO Auto-generated method stub
+				actuales();
 				
 			}
 		});
@@ -159,7 +161,7 @@ public class Ventana extends JFrame {
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				// TODO Auto-generated method stub
+				actualesBajas();
 				
 			}
 		});
@@ -172,7 +174,7 @@ public class Ventana extends JFrame {
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				// TODO Auto-generated method stub
+				historico();
 				
 			}
 		});
@@ -185,7 +187,7 @@ public class Ventana extends JFrame {
 			
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				// TODO Auto-generated method stub
+				responsableAula();
 				
 			}
 		});
@@ -198,10 +200,107 @@ public class Ventana extends JFrame {
 		
 	}
 	
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////	
+	
+	protected void responsableAula() {
+		// Método que muestra la tabla resultado de una búsqueda introducida por teclado
+		String resultado = JOptionPane.showInputDialog(this, "Introduzca un responsable o un aula: ", "Responsable/Aula", JOptionPane.INFORMATION_MESSAGE);
+		Connection conexion = null;
+		
+		try {
+			conexion = crearConexion(URL_BASE_DATOS);
+			PreparedStatement ps = conexion.prepareStatement("SELECT * FROM actual WHERE Resp LIKE '%" + resultado + "%' OR Local LIKE '" + resultado + "'");
+			ResultSet rs = ps.executeQuery();
+			Informe informe = new Informe(rs, "Responsable/Aula");
+			informe.setVisible(true);
+		
+		} catch (SQLException e) {
+			JOptionPane.showMessageDialog(this, e.getMessage(), "Error al mostrar los datos", JOptionPane.ERROR_MESSAGE);
+			try {
+				if (conexion != null) {
+					conexion.close();
+				}
+			} catch (SQLException e1) {} 
+		}
+	
+	}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////	
+	
+	protected void historico() {
+		// Método que muestra la tabla histórico
+		Connection conexion = null;
+		
+		try {
+			conexion = crearConexion(URL_BASE_DATOS);
+			PreparedStatement ps = conexion.prepareStatement("SELECT * FROM historico");
+			ResultSet rs = ps.executeQuery();
+			Informe informe = new Informe(rs, "Histórico");
+			informe.setVisible(true);
+		
+		} catch (SQLException e) {
+			JOptionPane.showMessageDialog(this, e.getMessage(), "Error al mostrar los datos", JOptionPane.ERROR_MESSAGE);
+			try {
+				if (conexion != null) {
+					conexion.close();
+				}
+			} catch (SQLException e1) {} 
+		}
+	
+	}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////	
+	
+	protected void actualesBajas() {
+		// Método que muestra la tabla actual al completo
+		Connection conexion = null;
+		
+		try {
+			conexion = crearConexion(URL_BASE_DATOS);
+			PreparedStatement ps = conexion.prepareStatement("SELECT * FROM actual");
+			ResultSet rs = ps.executeQuery();
+			Informe informe = new Informe(rs, "Actuales + Bajas");
+			informe.setVisible(true);
+		
+		} catch (SQLException e) {
+			JOptionPane.showMessageDialog(this, e.getMessage(), "Error al mostrar los datos", JOptionPane.ERROR_MESSAGE);
+			try {
+				if (conexion != null) {
+					conexion.close();
+				}
+			} catch (SQLException e1) {} 
+		}
+	
+	}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////	
+	
+	protected void actuales() {
+		// Método que muestra la tabla actual filtrando por los elementos que no han sido dados de baja
+		Connection conexion = null;
+		
+		try {
+			conexion = crearConexion(URL_BASE_DATOS);
+			PreparedStatement ps = conexion.prepareStatement("SELECT * FROM actual WHERE FecBaja IS NULL");
+			ResultSet rs = ps.executeQuery();
+			Informe informe = new Informe(rs, "Actuales");
+			informe.setVisible(true);
+		
+		} catch (SQLException e) {
+			JOptionPane.showMessageDialog(this, e.getMessage(), "Error al mostrar los datos", JOptionPane.ERROR_MESSAGE);
+			try {
+				if (conexion != null) {
+					conexion.close();
+				}
+			} catch (SQLException e1) {} 
+		}
+	
+	}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////	
 	
 	protected void limpiar() {
-	
+		// Método que limpia los campos de la ventana, dejándolos vacíos
 		Component[] componentes = panelCampos.getComponents();
 		for (int i = 0; i < componentes.length; i++) {
 			try {
@@ -218,7 +317,7 @@ public class Ventana extends JFrame {
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////	
 	
 	protected void cargarDatos() {
-		
+		// Método que carga los datos de un objeto con un código determinado introducido por teclado
 		Connection conexion = null;
 		try {
 			conexion = crearConexion(URL_BASE_DATOS);
@@ -286,6 +385,7 @@ public class Ventana extends JFrame {
 					}
 					
 				} else {
+					// Si no existe el código introducido
 					JOptionPane.showMessageDialog(this, "No existe ningún objeto con Código " + codigo +".", "Error", JOptionPane.ERROR_MESSAGE);
 					conexion.close();
 					return;
@@ -309,7 +409,7 @@ public class Ventana extends JFrame {
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////	
 	
 	private void crearBotones() {
-		
+		// Método que crea los dos botones de la parte inferior de la ventana
 		JPanel panelBotones = new JPanel();
 		panelBotones.setLayout(new GridLayout(1, 2, 30, 0));
 		panelBotones.setBorder(new EmptyBorder(20,20,20,20));
@@ -342,10 +442,11 @@ public class Ventana extends JFrame {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////	
 	
 	protected void darBaja() {
-	
+		// Método que da de baja un objeto
 		String codigo = txtCodigo.getText();
 		
 		if (codigo.equals("")) {
+			// Si no hay ningún objeto seleccionado no se puede dar de baja
 			JOptionPane.showMessageDialog(this, "No existe ningún objeto al que dar de baja", "Error", JOptionPane.ERROR_MESSAGE);
 		} else {
 			Connection conexion = null;
@@ -451,7 +552,7 @@ public class Ventana extends JFrame {
 				if (filas2 != 0) {
 					JOptionPane.showMessageDialog(this, "La baja se ha insertado en el histórico", "Info", JOptionPane.INFORMATION_MESSAGE);
 				}
-				
+				// Llamamos al método de refrescar datos para actualizar la información de la ventana
 				refrescarDatos();
 				conexion.close();
 				
@@ -473,8 +574,11 @@ public class Ventana extends JFrame {
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////	
 
 	protected void grabarDatos() {
+		// Método que da de alta o acualiza un objeto de la base de datos
+		
 		// Obtenemos el texto del campo codigo
 		String codigo = txtCodigo.getText();
+		// Si no hay código significa que hay que crear un nuevo objeto
 		if (codigo.equals("")) {
 			
 			Connection conexion = null;
@@ -518,7 +622,7 @@ public class Ventana extends JFrame {
 			}
 			
 		} else {
-			// Si existe un código en el campo txtCOdigo actualizamos la información
+			// Si existe un código en el campo txtCodigo actualizamos la información
 			Connection conexion = null;
 			
 			try {
@@ -662,7 +766,8 @@ public class Ventana extends JFrame {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////	
 	
 	private void rellenarPS2(PreparedStatement ps, ResultSet rs) {
-	
+		// Método variante de rellenarPS en el que también introducimos en el ps el código del objeto
+		// Al ejecutarse después del rellenarPS original, se entiende que todos los campos obligatorios estan cubiertos y no hace falta realizar su comprobación
 		try {
 			if (rs.first()) {
 				// Rellenar campo código
@@ -720,6 +825,7 @@ public class Ventana extends JFrame {
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////	
 	
 	private boolean rellenarPS(Connection conexion, PreparedStatement ps) {
+		// Método para rellenar un ps dado
 		
 		// Rellenar el campo descripcion
 		String descripcion = txtDescripcion.getText();
@@ -833,7 +939,7 @@ public class Ventana extends JFrame {
 
 		
 	private void crearCampos() {
-			
+		// Método que crea los campos y sus correspondientes JLabel que aparecen en la ventana principal
 		panelCampos = new JPanel();
 		panelCampos.setLayout(new GridLayout(13, 2, 20, 10));
 		panelCampos.setBorder(new EmptyBorder(20,20,20,20));
